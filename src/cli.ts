@@ -19,7 +19,7 @@ function asAgent(v: string | undefined, dflt: AgentName): AgentName {
 }
 
 const USAGE = `
-myarch — 그래프 기반 AI 개발 조직
+march — 그래프 기반 AI 개발 조직
 
   run     이슈 하나를 planner→coder→tester→reviewer→integrator 그래프로 처리
   report  runs/ 의 이벤트 로그를 집계해 설정별로 비교
@@ -30,12 +30,12 @@ myarch — 그래프 기반 AI 개발 조직
 
 옵션:
   --task-text <문자열>   파일 대신 인라인으로 요구사항 전달
-  --branch <이름>        작업 브랜치 (기본: myarch/<uuid8>)
+  --branch <이름>        작업 브랜치 (기본: march/<uuid8>)
   --config-id <라벨>     비교 리포트에서 묶을 이름 (기본: default)
   --planner|--coder|--reviewer <claude|codex>   노드별 모델 배정
   --test <명령>          tester 노드가 실행할 명령 (기본: npm test)
   --max-attempts <n>     코더 재시도 상한 (기본: 3)
-  --concurrent <n>       동시 에이전트 프로세스 상한 (기본: env MYARCH_MAX_CONCURRENT 또는 2)
+  --concurrent <n>       동시 에이전트 프로세스 상한 (기본: env MARCH_MAX_CONCURRENT 또는 2)
   --timeout <초>         노드 하나의 상한 (기본: 900)
 `;
 
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   const task = taskText ?? (await readFile(taskFile!, "utf8"));
 
   const runId = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + "-" + randomUUID().slice(0, 4);
-  const branch = flag(argv, "branch") ?? `myarch/${runId.slice(-4)}`;
+  const branch = flag(argv, "branch") ?? `march/${runId.slice(-4)}`;
 
   const config: RunConfig = {
     configId: flag(argv, "config-id") ?? "default",
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
       reviewer: asAgent(flag(argv, "reviewer"), "codex"), // 기본값은 교차검증
     },
     maxAttempts: Number(flag(argv, "max-attempts") ?? 3),
-    maxConcurrent: Number(flag(argv, "concurrent") ?? process.env["MYARCH_MAX_CONCURRENT"] ?? 2),
+    maxConcurrent: Number(flag(argv, "concurrent") ?? process.env["MARCH_MAX_CONCURRENT"] ?? 2),
     nodeTimeoutMs: Number(flag(argv, "timeout") ?? 900) * 1000,
     testCommand: flag(argv, "test") ?? "npm test",
   };

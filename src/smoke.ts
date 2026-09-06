@@ -2,14 +2,16 @@
  * 그래프 루프 검증. 모델을 부르지 않고 가짜 어댑터로 전이만 확인합니다.
  * 검증 대상: 되돌아가는 엣지, 재시도 상한, 이벤트 기록.
  */
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Agent, AgentResult, NodeName, RunConfig, RunState } from "./types.js";
 import { ENTRY } from "./graph.js";
-import { RunLog, readEvents } from "./events.js";
+import { RunLog, readEvents, runDir } from "./events.js";
 import { runGraph } from "./runner.js";
 import { sh } from "./sh.js";
+
+const RUN_ID = "smoke-run";
 
 const result = (text: string): AgentResult => ({
   ok: true, text, durationMs: 1, sessionId: "fake-session",
@@ -29,7 +31,7 @@ const fake: Agent = {
 
 async function main() {
   // 실제 git 저장소를 하나 만들어 결정적 노드가 진짜로 돌게 합니다.
-  const dir = await mkdtemp(join(tmpdir(), "myarch-smoke-"));
+  const dir = await mkdtemp(join(tmpdir(), "march-smoke-"));
   await sh("git init -q && git commit -q --allow-empty -m init", dir);
 
   // 테스트 명령: 처음 2회는 실패, 3회째부터 통과 (되돌아가는 엣지를 강제)
@@ -45,15 +47,18 @@ async function main() {
     maxAttempts: 3, maxConcurrent: 2, nodeTimeoutMs: 30_000, testCommand,
   };
   const state: RunState = {
-    runId: "smoke-run", config, task: "스모크 태스크", workdir: dir, branch: "smoke",
+    runId: RUN_ID, config, task: "스모크 태스크", workdir: dir, branch: "smoke",
     node: ENTRY, attempt: 0, reviews: [], sessions: {},
     startedAt: new Date().toISOString(), totals: { costUsd: 0, durationMs: 0 },
   };
 
-  const log = await RunLog.open("smoke-run");
+  // events.jsonl 은 append-only 이므로 재실행 시 이전 회차가 누적됩니다.
+  // 실전 실행에서는 그게 옳지만, 스모크는 매번 깨끗한 상태에서 시작해야 합니다.
+  await rm(runDir(RUN_ID), { recursive: true, force: true });
+  const log = await RunLog.open(RUN_ID);
   const outcome = await runGraph(state, log, () => fake);
 
-  const seq = (await readEvents("smoke-run"))
+  const seq = (await readEvents(RUN_ID))
     .filter((e): e is Extract<typeof e, { t: "node_started" }> => e.t === "node_started")
     .map((e) => e.node);
 

@@ -38,7 +38,7 @@ export const codexAgent: Agent = {
 
   async run(req: AgentRequest): Promise<AgentResult> {
     const started = Date.now();
-    const outFile = join(tmpdir(), `myarch-codex-${randomUUID()}.txt`);
+    const outFile = join(tmpdir(), `march-codex-${randomUUID()}.txt`);
     const model = req.model ?? "codex-default";
 
     // 최종 응답은 JSONL 을 파싱하지 않고 -o 파일에서 읽습니다.
